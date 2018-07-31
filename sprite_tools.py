@@ -120,10 +120,44 @@ class Sprite(object):
         self.x_pos = 0
         self.y_pos = 0
         self.paused = False
+        self.paused_at = 0
         self.active_animation = None
 
         #   Set frames per second
         self.fps = fps
+
+
+    def pause(self):
+        """   Pause the active animation   """
+
+        self.paused = True
+
+        #   Reduce calculated frame by a this amount of time; essentially, while
+        #   this is counting up, the animation won't appear to play
+        self.paused_at = time.time()
+
+
+    def resume(self):
+        """   Resume the active animation  """
+
+        #   Remove the time paused from the frame calculation by making the
+        #   animation think it was started later
+        now = time.time()
+        time_paused = now - self.paused_at
+        self.last_start += time_paused
+
+        #   Reset flags/timers
+        self.paused = False
+        self.paused_at = 0
+
+
+    def toggle_pause(self):
+        """     Toggles the pause state of the active animation. """
+
+        if self.paused:
+            self.resume()
+        else:
+            self.pause()
 
 
     def start_animation(self, name):
@@ -134,6 +168,7 @@ class Sprite(object):
 
         #   Remember when this animation was selected
         self.last_start = time.time()
+        self.paused_at = 0
 
         #   Change active animation
         self.active_animation = name
@@ -153,7 +188,12 @@ class Sprite(object):
 
         #   Determine what frame of the animation you should be on
         now = time.time()
-        elapsed = now - self.last_start
+        if self.paused:
+            #   If animation is paused, calculate what frame it was on at pause
+            elapsed = self.paused_at - self.last_start
+        else:
+            #   Otherwise, determine what frame it should be now
+            elapsed = now - self.last_start
         frame_time = 1.0/self.fps
         frames_count = int(elapsed/frame_time)
 
@@ -173,6 +213,7 @@ class Sprite(object):
     def set_position(self, pos):
         """ Sets the position of the sprite on the screen. """
 
+        #   This should be fairly obvious in function, but comments are good!
         self.x_pos, self.y_pos = pos
 
 
