@@ -225,6 +225,7 @@ if __name__ == '__main__':
     screen = pygame.display.set_mode((220, 150))
     pygame.display.set_caption("Sprite Tools Test")
 
+    #   This creates the sprite object and adds an idle animation to it
     a = SpriteSheet('TestSprite.png', (4, 1), 4)
     b = Sprite(fps = 9)
     b.add_animation({"Idle": a})
@@ -232,5 +233,8 @@ if __name__ == '__main__':
 
     while True:
         screen.fill((50, 50, 50))
+
+        #   This draws the current frame on the screen
         b.draw(screen)
+
         pygame.display.flip()
