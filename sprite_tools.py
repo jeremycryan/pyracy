@@ -125,6 +125,7 @@ class Sprite(object):
 
         #   Set frames per second
         self.fps = fps
+        self.now = 0
 
 
     def pause(self):
@@ -134,7 +135,7 @@ class Sprite(object):
 
         #   Reduce calculated frame by a this amount of time; essentially, while
         #   this is counting up, the animation won't appear to play
-        self.paused_at = time.time()
+        self.paused_at = self.now
 
 
     def resume(self):
@@ -142,7 +143,7 @@ class Sprite(object):
 
         #   Remove the time paused from the frame calculation by making the
         #   animation think it was started later
-        now = time.time()
+        now = self.now
         time_paused = now - self.paused_at
         self.last_start += time_paused
 
@@ -167,11 +168,19 @@ class Sprite(object):
         self.paused = False
 
         #   Remember when this animation was selected
-        self.last_start = time.time()
+        self.last_start = 0
+        self.now = 0
         self.paused_at = 0
 
         #   Change active animation
         self.active_animation = name
+
+
+    def update(self, dt):
+        """ Updates the animation with a time step of dt """
+
+        #   Change what time the sprite thinks it is
+        self.now += dt
 
 
     def draw(self, surf):
@@ -187,7 +196,7 @@ class Sprite(object):
         active_spritesheet = self.animations[self.active_animation]
 
         #   Determine what frame of the animation you should be on
-        now = time.time()
+        now = self.now
         if self.paused:
             #   If animation is paused, calculate what frame it was on at pause
             elapsed = self.paused_at - self.last_start
@@ -219,7 +228,7 @@ class Sprite(object):
 
 if __name__ == '__main__':
     #   Example script that draws a hydra on the screen. It only takes four
-    #   lines of code to add the animation to a sprite, and one line to draw it.
+    #   lines of code to add the animation to a sprite, and two lines to draw it.
 
     pygame.init()
     screen = pygame.display.set_mode((220, 150))
@@ -231,10 +240,20 @@ if __name__ == '__main__':
     b.add_animation({"Idle": a})
     b.start_animation("Idle")
 
+    then = time.time()
+    time.sleep(0.01)
     while True:
+
+        #   Calculate time step
+        now = time.time()
+        dt = now - then
+        then = now
+
+        #   Blank screen
         screen.fill((50, 50, 50))
 
         #   This draws the current frame on the screen
+        b.update(dt)
         b.draw(screen)
 
         pygame.display.flip()
