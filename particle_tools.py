@@ -410,17 +410,102 @@ class ParticleEffect(object):
 
     #TODO this whole class
 
-    def __init__(self, pos = (0, 0), width = 50, height = 50):
-        pass
+    def __init__(self, pos = (0, 0), width = 50, height = 50,
+        duration = -1):
+        """ Init method for particle effect class.
 
-    def add_particle(self, particle):
-        pass
+        pos: initial position of particle effect object, measured from center
+            of field, in pixels
+        width: width of the field that can spawn particles (pixels)
+        height: height of the region that can spawn particles (pixels)
+        duration: time after which the field will expire --- useful for making
+            short bursts"""
+
+        #   Save initial inputs
+        self.pos = pos
+        self.width = width
+        self.height = height
+        self.duration = duration
+
+        #   List of particle objects managed by this particle effect object
+        self.particle_types = []
+        self.periods = []
+        self.cooldowns = []
+
+        #   List of actual particle instances
+        self.particles = []
+
+
+    def add_particle_type(self, particle, period = 0.2, num = 1):
+        """ Adds a particle type for the particle effect object to periodically
+        spawn.
+
+        particle: a particle object
+        period: the delay between spawning consecutive particles, in seconds
+        num: number of instances of the particle type to add """
+
+        #   Repeat num times
+        for i in range(num):
+
+            #   Add the particle and period to the list
+            self.particle_types.append(particle)
+            self.periods.append(period)
+
+            #   These keep track of how long it has been since spawning a
+            #   particle of that type
+            self.cooldowns.append(0)
+
+
+    def spawn_particle(self, particle):
+        """ Spawns a particle of the chosen type at a random point within the
+        field. """
+
+        #   Determine a random position for the particle to spawn
+        x_off = int(random.random() * self.width)
+        y_off = int(random.random() * self.height)
+        half_width = self.width * 0.5
+        half_height = self.height * 0.5
+        x = self.pos[0] - half_width + x_off
+        y = self.pos[1] - half_height + y_off
+
+        #   Create the particle
+        self.particles.append(particle.create((x, y)))
+
 
     def draw(self, screen):
-        pass
+        """ Draws each particle instance associated with the object. """
+
+        #   Iterate through particles and draw each
+        for item in self.particles:
+            item.draw(screen)
+
 
     def update(self, dt):
-        pass
+        """ Updates each particle in the effect, and spawns new particles
+        periodically. """
+
+        #   Iterate through particles assigned to object
+        for item in self.particles:
+
+            #   If the particle has expired somehow, remove it.
+            if not item.is_active():
+                self.particles.remove(item)
+
+            #   Otherwise, update the particle
+            else:
+                item.update_particle(dt)
+
+        #   Iterate through particle types and spawn new particles where
+        #   necessary
+        for idx, item in enumerate(self.particle_types):
+
+            #   Increment time on counters
+            self.cooldowns[idx] += dt
+
+            #   Spawn a particle if time is greater than the period
+            if self.cooldowns[idx] > self.periods[idx]:
+                self.cooldowns[idx] -= self.periods[idx]
+                self.spawn_particle(item)
 
 
 ################################################################################
@@ -430,41 +515,79 @@ class ParticleEffect(object):
 if __name__ == '__main__':
 
     pygame.init()
-    screen = pygame.display.set_mode((200, 200))
+    screen = pygame.display.set_mode((400, 200))
     pygame.display.set_caption("Particle Tools Test")
 
-
+    #   DEFINE BUBBLES
+    #   Define particle instance
     a = Particle(pos = (100, 100), path = "circle",
-        width = 20, height = 20)
+        width = 20, height = 20, color = (160, 190, 255))
+    a2 = Particle(pos = (100, 100), path = "circle",
+        width = 28, height = 28, color = (100, 110, 245))
+
+    #   Add some behaviors to the particle
     a.apply_behavior(OpacityEffect(decay = 0.6))
     a.apply_behavior(ScaleEffect(growth = -0.7))
-    #a.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 100))
+    a.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 100))
     a.apply_behavior(CircularMotionEffect(init_radius = 10, init_freq = 1.5))
 
-    particles = []
+    a2.apply_behavior(OpacityEffect(decay = 0.6))
+    a2.apply_behavior(ScaleEffect(growth = -0.6))
+    a2.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 90))
+    a2.apply_behavior(CircularMotionEffect(init_radius = 10, init_freq = 1.5))
 
+
+    #   Define particle effect instance
+    bubbles = ParticleEffect(pos = (100, 150), width = 80, height = 60)
+    bubbles.add_particle_type(a, period = 0.03)
+    bubbles.add_particle_type(a2, period = 0.05)
+
+    #   DEFINE FIRE
+    #   Define particle types
+    b = Particle(pos = (300, 100), path = "square", width = 25, height = 25,
+        color = (245, 80, 70))
+    c = Particle(pos = (300, 100), path = "square", width = 18, height = 18,
+        color = (245, 160, 60))
+    d = Particle(pos = (300, 100), path = "square", width = 12, height = 12,
+        color = (235, 210, 90))
+    e = Particle(pos = (300, 100), path = "square", width = 20, height = 20,
+        color = (255, 255, 255))
+
+    #   Add behaviors to particles
+    b.apply_behavior(OpacityEffect(decay = 0.4))
+    b.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 50))
+    c.apply_behavior(OpacityEffect(decay = 0.5))
+    c.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 75))
+    d.apply_behavior(OpacityEffect(decay = 0.6))
+    d.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 90))
+    e.apply_behavior(OpacityEffect(decay = 1))
+
+    #   Define particle effect instance
+    fire = ParticleEffect(pos = (300, 150), width = 50, height = 60)
+    fire.add_particle_type(b, period = 0.12)
+    fire.add_particle_type(c, period = 0.1)
+    fire.add_particle_type(d, period = 0.08)
+    fire.add_particle_type(e, period = 0.05)
+
+    effects = [bubbles, fire]
     then = time.time()
-    timer = 0
+    time.sleep(0.01)
     while True:
         now = time.time()
         dt = now - then
         then = now
-        timer += dt
-        screen.fill((0, 0, 0))
-        space = 0.03
-        if timer > space:
-            timer -= space
-            x = (random.random() * 100) + 50
-            y = (random.random() * 100) + 50
-            particles.append(a.create((x, y)))
 
-        for part in particles:
-            if not part.is_active():
-                particles.remove(part)
-            part.update_particle(dt)
-            part.draw(screen)
-
+        #   Print frames per second
         print("FPS: %s" % (1.0/dt))
 
+        #   Update cloud and draw to display
+        screen.fill((0, 0, 0))
+
+        for effect in effects:
+            effect.update(dt)
+            effect.draw(screen)
+
+        fire_x = int(20 * sin(now * pi) + 300)
+        fire.pos = (fire_x, fire.pos[1])
 
         pygame.display.flip()
