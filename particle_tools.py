@@ -15,7 +15,8 @@ from math import sin, cos, pi
 class Particle(object):
     """ A single particle from a system, drawn on the screen. """
 
-    def __init__(self, pos = (0, 0), path = "square", width = 10, height = 10):
+    def __init__(self, pos = (0, 0), path = "square", width = 10, height = 10,
+        color = (255, 255, 255)):
         """ Initialization function for particle """
 
         #   Type of particle --- either str 'square', 'circle', or an image path
@@ -31,7 +32,7 @@ class Particle(object):
 
         #   Default values that can be modified by particle behaviors
         self.opacity = 1.0
-        self.color = (160, 20, 200)
+        self.color = color
         #   TODO make width and height variable on image used
         self.width = width     #   Width of particle in pixels
         self.height = height    #   Height pf particle in pixels
@@ -61,10 +62,14 @@ class Particle(object):
         position. """
 
         #   Instantiate the particle
-        particle = Particle(pos, self.path, self.width, self.height)
+        particle = Particle(pos, self.path, self.width, self.height, self.color)
 
         #   Add all of the original particles behaviors
         particle.behaviors = self.behaviors[:]
+
+        #   Initialize behaviors with on apply effects
+        for item in particle.behaviors:
+            item.on_apply(particle)
 
         return particle
 
@@ -86,6 +91,8 @@ class Particle(object):
         #   Draw method for square particle
         if self.path == "square":
             self.draw_square(screen)
+        elif self.path == "circle":
+            self.draw_circle(screen)
         else:
             print("Unable to draw particle of type %s." % self.path)
 
@@ -99,8 +106,8 @@ class Particle(object):
         half_h = 0.5 * h
 
         #   Determine position of blit based on width and height
-        x = self.pos[0] - half_w
-        y = self.pos[1] - half_h
+        x = int(self.pos[0] - half_w)
+        y = int(self.pos[1] - half_h)
         blit_pos = (x, y)
 
         #   Create pygame surface
@@ -111,6 +118,33 @@ class Particle(object):
 
         #   Blit to screen
         screen.blit(square, (x, y))
+
+    def draw_circle(self, screen):
+        """ Draws the particle as a circle, centered at the position self.pos"""
+
+        #   Create values for width and height
+        w = int(self.width)
+        h = int(self.height)
+        half_w = 0.5 * w
+        half_h = 0.5 * h
+
+        #   Determine position of blit based on width and height
+        x = int(self.pos[0] - half_w)
+        y = int(self.pos[1] - half_h)
+        blit_pos = (x, y)
+
+        #   Create a surface and draw a circle on it
+        trans_color = (0, 255, 0)
+        surf = pygame.Surface((w, h))
+        surf.fill(trans_color)
+        pygame.draw.ellipse(surf, self.color, (0, 0, w, h))
+        surf.set_colorkey(trans_color)
+
+        alpha = int(self.opacity * 255)
+        if alpha < 0: alpha = 0
+        surf.set_alpha(alpha)
+
+        screen.blit(surf, (x, y))
 
 
     def on_apply(self, particle):
@@ -125,6 +159,22 @@ class Particle(object):
         pass
 
 
+    def is_active(self):
+        """ Returns true if the particle is in a state where it is still visible
+        and animated. """
+
+        #   Particle is not useful if it is invisible
+        if self.opacity <= 0:
+            return False
+
+        #   Particle is not useful if it has zero size
+        elif self.width <= 0 or self.height <= 0:
+            return False
+
+        #   Otherwise, particle is probably still active
+        else:
+            return True
+
 
 class ParticleBehavior(object):
     """ Defines a single behavior of a particle, such as a change in opacity
@@ -134,12 +184,17 @@ class ParticleBehavior(object):
         """ Init function for particle behavior """
         pass
 
+    def on_apply(self, particle):
+        """ Method to occur when the effect is added to a particle """
+        pass
+
     def update(self, particle, dt):
         """ Applies the animation effect to the particle. """
         pass
 
+
 ################################################################################
-###################### SPECIFIC PARTICLE EFFECTS ###############################
+######################### PARTICLE BEHAVIORS ###################################
 ################################################################################
 
 class OpacityEffect(ParticleBehavior):
@@ -192,7 +247,7 @@ class ScaleEffect(ParticleBehavior):
             compounds.
         """
 
-        self.init_sclae = init_scale
+        self.init_scale = init_scale
         self.growth = growth
 
 
@@ -200,9 +255,8 @@ class ScaleEffect(ParticleBehavior):
         """ Applies any immediate alterations to the particle when the effect is
         added. """
 
-        particle.width *= init_scale
-
-        particle.height *= init_scale
+        particle.width *= self.init_scale
+        particle.height *= self.init_scale
 
 
     def update(self, particle, dt):
@@ -215,7 +269,6 @@ class ScaleEffect(ParticleBehavior):
 
         particle.width *= growth_prop
         particle.height *= growth_prop
-
 
 
 
@@ -267,6 +320,109 @@ class LinearMotionEffect(ParticleBehavior):
         particle.pos = (x, y)
 
 
+
+class CircularMotionEffect(ParticleBehavior):
+    """ Defines an animation for a particle moving in a circle. """
+
+
+    def __init__(self, init_freq = 1.0, init_radius = 50.0,
+        accel = 0, growth = 0, init_angle = 0):
+
+        """ Initializes the motion effect.
+
+        init_freq: the initial frequency, in Hertz, of the circular motion
+        init_radius: the initial radius of the circular motion, in pixels
+        accel: acceleration, in Hz/s, of the circular motion
+        growth: change in size, in pixels/s/s, of the path's radius
+        init_angle: initial angle, as a proportion of a full circle, CCW from
+            the positive X """
+
+        #   Initialize the superclass
+        super(CircularMotionEffect, self).__init__(init_freq = init_freq,
+            init_radius = init_radius,
+            accel = accel,
+            growth = growth,
+            init_angle = init_angle)
+
+        #   Save parameters
+        self.freq = init_freq
+        self.radius = init_radius
+        self.accel = accel
+        self.growth = growth
+        self.angle = init_angle
+
+
+    def on_apply(self, particle):
+        """ Applies any immediate alterations to the particle when the effect is
+        added. """
+
+        particle.circ_mot_angle = self.angle
+        particle.circ_mot_rad = self.radius
+        particle.circ_mot_freq = self.freq
+
+
+    def update(self, particle, dt):
+        """ Applies the animation effect to the particle.
+
+        particle: the particle object to apply the change
+        dt: the time since last update, in seconds """
+
+        #   Save current values
+        old_angle = particle.circ_mot_angle
+        old_radius = particle.circ_mot_rad
+        old_x, old_y = particle.pos
+
+        #   Update values based on time passed
+        particle.circ_mot_angle += particle.circ_mot_freq * dt
+        particle.circ_mot_freq += self.accel * dt
+        particle.circ_mot_rad += self.growth * dt
+
+        #   Determine position of circle center based on old angle and radius
+        x_off = -cos(old_angle * 2 * pi) * old_radius
+        y_off = -sin(old_angle * 2 * pi) * old_radius
+        center_x = old_x + x_off
+        center_y = old_y + y_off
+
+        #   Determine new position of particle after time step
+        new_x_off = cos(particle.circ_mot_angle * 2 * pi) \
+            * particle.circ_mot_rad
+        new_y_off = sin(particle.circ_mot_angle * 2 * pi) * \
+            particle.circ_mot_rad
+        new_x = center_x + new_x_off
+        new_y = center_y + new_y_off
+
+        #   Change the particle's position
+        particle.pos = (new_x, new_y)
+
+
+
+################################################################################
+####################### PARTICLE EFFECT DEFINITION #############################
+################################################################################
+
+
+
+class ParticleEffect(object):
+    """ This class manages a 'cloud' of particles. It acts as a container that
+    holds one or more particle types and spawn them periodically. It can move
+    as a source, but individual particles maintain their individual positions on
+    the screen. """
+
+    #TODO this whole class
+
+    def __init__(self, pos = (0, 0), width = 50, height = 50):
+        pass
+
+    def add_particle(self, particle):
+        pass
+
+    def draw(self, screen):
+        pass
+
+    def update(self, dt):
+        pass
+
+
 ################################################################################
 ############################### DEMO SCRIPT ####################################
 ################################################################################
@@ -278,10 +434,12 @@ if __name__ == '__main__':
     pygame.display.set_caption("Particle Tools Test")
 
 
-    a = Particle(pos = (100, 100), path = "square", width = 20, height = 20)
-    a.apply_behavior(OpacityEffect(decay = 1.0))
-    a.apply_behavior(ScaleEffect(growth = -0.6))
-    a.apply_behavior(LinearMotionEffect(direction = 0.25, init_speed = 50))
+    a = Particle(pos = (100, 100), path = "circle",
+        width = 20, height = 20)
+    a.apply_behavior(OpacityEffect(decay = 0.6))
+    a.apply_behavior(ScaleEffect(growth = -0.7))
+    #a.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 100))
+    a.apply_behavior(CircularMotionEffect(init_radius = 10, init_freq = 1.5))
 
     particles = []
 
@@ -293,7 +451,7 @@ if __name__ == '__main__':
         then = now
         timer += dt
         screen.fill((0, 0, 0))
-        space = 0.10
+        space = 0.03
         if timer > space:
             timer -= space
             x = (random.random() * 100) + 50
@@ -301,11 +459,12 @@ if __name__ == '__main__':
             particles.append(a.create((x, y)))
 
         for part in particles:
-            if part.opacity <= 0:
+            if not part.is_active():
                 particles.remove(part)
             part.update_particle(dt)
             part.draw(screen)
 
+        print("FPS: %s" % (1.0/dt))
+
 
         pygame.display.flip()
-        time.sleep(0.01)
