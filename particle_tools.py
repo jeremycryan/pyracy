@@ -426,6 +426,7 @@ class ParticleEffect(object):
         self.width = width
         self.height = height
         self.duration = duration
+        self.time = 0               #   Time particle effect has been active
 
         #   List of particle objects managed by this particle effect object
         self.particle_types = []
@@ -484,6 +485,9 @@ class ParticleEffect(object):
         """ Updates each particle in the effect, and spawns new particles
         periodically. """
 
+        #   Count up time active, and don't show animation if time is up
+        self.time += dt
+
         #   Iterate through particles assigned to object
         for item in self.particles:
 
@@ -494,6 +498,10 @@ class ParticleEffect(object):
             #   Otherwise, update the particle
             else:
                 item.update_particle(dt)
+
+        #   Don't spawn new particles if effect has expired
+        if self.time >= self.duration and self.duration > 0:
+            return
 
         #   Iterate through particle types and spawn new particles where
         #   necessary
@@ -515,15 +523,15 @@ class ParticleEffect(object):
 if __name__ == '__main__':
 
     pygame.init()
-    screen = pygame.display.set_mode((400, 200))
+    screen = pygame.display.set_mode((400, 400))
     pygame.display.set_caption("Particle Tools Test")
 
     #   DEFINE BUBBLES
     #   Define particle instance
     a = Particle(pos = (100, 100), path = "circle",
-        width = 20, height = 20, color = (160, 190, 255))
+        width = 14, height = 14, color = (160, 190, 255))
     a2 = Particle(pos = (100, 100), path = "circle",
-        width = 28, height = 28, color = (100, 110, 245))
+        width = 20, height = 20, color = (100, 110, 245))
 
     #   Add some behaviors to the particle
     a.apply_behavior(OpacityEffect(decay = 0.6))
@@ -539,37 +547,57 @@ if __name__ == '__main__':
 
     #   Define particle effect instance
     bubbles = ParticleEffect(pos = (100, 150), width = 80, height = 60)
-    bubbles.add_particle_type(a, period = 0.03)
-    bubbles.add_particle_type(a2, period = 0.05)
+    bubbles.add_particle_type(a, period = 0.01)
+    bubbles.add_particle_type(a2, period = 0.02)
 
     #   DEFINE FIRE
     #   Define particle types
-    b = Particle(pos = (300, 100), path = "square", width = 25, height = 25,
+    b = Particle(pos = (300, 100), path = "square", width = 12, height = 12,
         color = (245, 80, 70))
-    c = Particle(pos = (300, 100), path = "square", width = 18, height = 18,
+    c = Particle(pos = (300, 100), path = "square", width = 9, height = 9,
         color = (245, 160, 60))
-    d = Particle(pos = (300, 100), path = "square", width = 12, height = 12,
+    d = Particle(pos = (300, 100), path = "square", width = 7, height = 7,
         color = (235, 210, 90))
-    e = Particle(pos = (300, 100), path = "square", width = 20, height = 20,
+    e = Particle(pos = (300, 100), path = "square", width = 8, height = 8,
         color = (255, 255, 255))
 
     #   Add behaviors to particles
-    b.apply_behavior(OpacityEffect(decay = 0.4))
-    b.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 50))
-    c.apply_behavior(OpacityEffect(decay = 0.5))
-    c.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 75))
-    d.apply_behavior(OpacityEffect(decay = 0.6))
-    d.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 90))
+    b.apply_behavior(OpacityEffect(decay = 0.5))
+    b.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 60))
+    c.apply_behavior(OpacityEffect(decay = 0.6))
+    c.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 80))
+    d.apply_behavior(OpacityEffect(decay = 0.7))
+    d.apply_behavior(LinearMotionEffect(direction = -0.25, init_speed = 100))
     e.apply_behavior(OpacityEffect(decay = 1))
 
     #   Define particle effect instance
     fire = ParticleEffect(pos = (300, 150), width = 50, height = 60)
-    fire.add_particle_type(b, period = 0.12)
-    fire.add_particle_type(c, period = 0.1)
-    fire.add_particle_type(d, period = 0.08)
-    fire.add_particle_type(e, period = 0.05)
+    fire.add_particle_type(b, period = 0.03)
+    fire.add_particle_type(c, period = 0.025)
+    fire.add_particle_type(d, period = 0.015)
+    fire.add_particle_type(e, period = 0.01)
 
-    effects = [bubbles, fire]
+    #   DEFINE GRASS
+    #   Define particle types
+    g1 = Particle(pos = (100, 300), path = "square", width = 20, height = 20,
+        color = (40, 145, 50))
+    g2 = Particle(pos = (100, 300), path = "square", width = 14, height = 14,
+        color = (160, 225, 90))
+
+    #   Add behaviors to particles
+    g1.apply_behavior(CircularMotionEffect(init_radius = 20, init_freq = 0.6,
+        growth = 20))
+    g1.apply_behavior(OpacityEffect(decay = 0.5))
+    g2.apply_behavior(CircularMotionEffect(init_radius = 20, init_freq = 0.7,
+        growth = 45))
+    g2.apply_behavior(OpacityEffect(decay = 0.45))
+
+    #   Define particle effect instance
+    grass = ParticleEffect(pos = (220, 300), width = 20, height = 20)
+    grass.add_particle_type(g1, period = 0.02)
+    grass.add_particle_type(g2, period = 0.03)
+
+    effects = [bubbles, fire, grass]
     then = time.time()
     time.sleep(0.01)
     while True:
