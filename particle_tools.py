@@ -523,7 +523,7 @@ class ParticleEffect(object):
 if __name__ == '__main__':
 
     pygame.init()
-    screen = pygame.display.set_mode((400, 400))
+    screen = pygame.display.set_mode((600, 200))
     pygame.display.set_caption("Particle Tools Test")
 
     #   DEFINE BUBBLES
@@ -593,7 +593,7 @@ if __name__ == '__main__':
     g2.apply_behavior(OpacityEffect(decay = 0.45))
 
     #   Define particle effect instance
-    grass = ParticleEffect(pos = (220, 300), width = 20, height = 20)
+    grass = ParticleEffect(pos = (500, 100), width = 20, height = 20)
     grass.add_particle_type(g1, period = 0.02)
     grass.add_particle_type(g2, period = 0.03)
 
