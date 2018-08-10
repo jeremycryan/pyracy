@@ -92,6 +92,14 @@ class Camera(object):
         return new_dt
 
 
+    def set_speed(self, speed):
+        """ Sets the capture speed of the camera. 1.0 is normal speed, and
+        higher speeds will make animations and particle effects move faster. """
+
+        #   Change capture speed
+        self.speed = speed
+
+
     def zoom_to(self, zoom_amt):
         """ Applies a zoom to the specified amount.
 
