@@ -1,7 +1,7 @@
 # Pyracy
 *A collection of classes to support rapid game development with pygame.*
 
-
+**Note: this project is old, imperfect, and unoptomized. The Camera class in particular gives very poor performance. I intend to create a more robust game development toolkit for PyGame, but haven't gotten around to it yet.**
 
 ## Sprite Tools
 These classes allow for manipulation of sprites and spritesheet objects, which read an image and display it on a pygame surface as an animation.
